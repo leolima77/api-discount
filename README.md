@@ -1,6 +1,6 @@
 # Discount API – gRPC on .NET
 
-A small **gRPC** service in **.NET** that creates and consumes discount codes.  
+A **gRPC** service in **.NET** that creates and consumes discount codes.  
 The project focuses on **performance**, **observability**, **testing** and **containerization**.
 
 ---
