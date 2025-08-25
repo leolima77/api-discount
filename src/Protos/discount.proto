@@ -1,0 +1,34 @@
+syntax = "proto3";
+package discount;
+
+option csharp_namespace = "Discount.Proto";
+
+// Serviço público exigido no teste
+service DiscountService {
+  rpc Generate (GenerateRequest) returns (GenerateResponse);
+  rpc UseCode  (UseCodeRequest)  returns (UseCodeResponse);
+}
+
+message GenerateRequest {
+  uint32 count  = 1;  // 1..2000
+  uint32 length = 2;  // 7 ou 8
+}
+
+message GenerateResponse {
+  bool result = 1;    // true se gerou a quantidade pedida
+}
+
+message UseCodeRequest {
+  string code = 1;    // 7..8 chars
+}
+
+enum UseResult {
+  USE_UNKNOWN     = 0;
+  USE_OK          = 1;
+  USE_INVALID     = 2;
+  USE_ALREADYUSED = 3;
+}
+
+message UseCodeResponse {
+  UseResult result = 1;
+}

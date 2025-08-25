@@ -1,0 +1,94 @@
+trigger:
+  branches:
+    include:
+      #- master
+      - feature/*
+      - hotfix/*
+      - release/*
+  tags:
+    include:
+      - refs/tags/*
+
+pool:
+  name: 'Azure Pipelines'
+  vmImage:  ubuntu-latest
+
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+  buildFramework: 'net8.0'
+  imageRepository: $(Build.Repository.Name)
+
+steps:
+
+- checkout: self
+  fetchDepth: 0
+
+- task: UseDotNet@2
+  inputs:
+    packageType: 'sdk'
+    version: '2.2.x'
+
+- task: UseDotNet@2
+  inputs:
+    packageType: 'sdk'
+    version: '8.x'
+
+- task: gitversion/setup@3
+  displayName: Install GitVersion
+  inputs:
+    versionSpec: '5.x'
+
+- task: gitversion/execute@3
+  displayName: Determine Version
+  inputs:
+    useConfigFile: false
+
+- task: VariableSetTask@3
+  displayName: Getting prod fullsemver for docker
+  inputs:
+    variableName: 'DockerSemVer'
+    From: 'value'
+    value: '$(GitVersion.SemVer)'
+    
+- task: VariableSetTask@3
+  displayName: Getting dev fullsemver for docker
+  inputs:
+    variableName: 'DockerSemVer'
+    From: 'value'
+    value: '$(GitVersion.SemVer)_$(GitVersion.CommitsSinceVersionSource)'
+  condition: and(not(or(eq(variables['Build.SourceBranchName'], 'master'), contains(variables['Build.SourceBranch'], 'hotfix'), contains(variables['Build.SourceBranch'], 'tags'))),not(contains(variables['GitVersion.FullSemVer'], 'PullRequest')))
+
+- task: Bash@3
+  displayName: "Add Build Tag: unstable"
+  condition: and(not(or(eq(variables['Build.SourceBranchName'], 'master'), contains(variables['Build.SourceBranch'], 'hotfix'), contains(variables['Build.SourceBranch'], 'tags'))),not(contains(variables['GitVersion.FullSemVer'], 'PullRequest')))
+  inputs:
+    targetType: inline
+    script: echo "##vso[build.addbuildtag]unstable"
+
+- task: Bash@3
+  displayName: "Add Build Tag: stable"
+  condition: contains(variables['Build.SourceBranch'], 'tags')
+  inputs:
+    targetType: inline
+    script: echo "##vso[build.addbuildtag]stable"
+
+- task: Bash@3
+  displayName: "Add Build Tag: hotfix"
+  condition: contains(variables['Build.SourceBranch'], 'hotfix')
+  inputs:
+    targetType: inline
+    script: echo "##vso[build.addbuildtag]hotfix"
+        
+- task: CmdLine@2
+  displayName: Build
+  inputs:
+    script: |
+      docker run --privileged --rm tonistiigi/binfmt --install arm64
+      docker run --privileged --rm tonistiigi/binfmt
+      docker buildx create --use
+      docker buildx build --platform linux/arm64 \
+        -t registry.repo.com/$(Build.Repository.Name):$(DockerSemVer) \
+        --push -f ./dockerfile .\
