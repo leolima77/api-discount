@@ -40,7 +40,7 @@ src/
       Interfaces/              # repository interfaces
       Repositories/            # repository implementations (Dapper)
       DapperContext.cs
-    Domains/                   # domain entities (e.g., DiscountCode)
+    Domains/                   # domain entities (DiscountCode)
     Helpers/                   # helpers (e.g., CodeGenerator)
     Protos/                    # discount.proto (gRPC contracts)
     Services/
@@ -133,7 +133,6 @@ dotnet test
 
 Runtime tuning (example):
 
-- `DOTNET_ThreadPool_MinThreads=200`
 - Server GC (enabled in project config)
 - HTTP/2 limits for high concurrency
 
